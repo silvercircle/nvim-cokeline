@@ -1,5 +1,5 @@
 local components = require("cokeline/components")
-local sidebar = require("cokeline/sidebar")
+local sidebar = require("cokeline/my_sidebar")
 local rhs = require("cokeline/rhs")
 local RenderContext = require("cokeline/context")
 
