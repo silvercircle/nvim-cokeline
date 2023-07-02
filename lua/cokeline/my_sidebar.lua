@@ -25,7 +25,7 @@ local function findwinbyBufType(type)
   return { 0 }
 end
 
----@return Component[]
+---@return Component<SidebarContext>[]
 local get_components = function()
   if not _G.cokeline.config.sidebar then
     return {}
