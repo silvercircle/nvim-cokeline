@@ -405,8 +405,6 @@ require("cokeline.history"):last():focus()
 ## :mountain: Plans and Ideas
 
 - Statusline
-- Tapbage components
-  - Scope buffers to tabs
 
 If you have an idea or feature request, don't hesitate to open an issue!
 
@@ -471,6 +469,9 @@ EOF
 ```
 
 ## :wrench: Configuration
+
+> **note**<br>
+> Check out the [wiki](https://github.com/willothy/nvim-cokeline/wiki) for more details and API documentation.
 
 All the configuration is done by changing the contents of the Lua table passed to
 the `setup` function.
