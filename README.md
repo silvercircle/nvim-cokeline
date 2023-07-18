@@ -415,6 +415,8 @@ set. If you want to display devicons in your bufferline you'll also need the
 [kyazdani42/nvim-web-devicons](https://github.com/kyazdani42/nvim-web-devicons)
 plugin and a patched font (see [Nerd Fonts](https://www.nerdfonts.com/)).
 
+As of v0.4.0, [nvim-lua/plenary.nvim](https://github.com/nvim-lua/plenary.nvim) is required as well.
+
 ## :package: Installation
 
 #### Lua
@@ -425,7 +427,8 @@ plugin and a patched font (see [Nerd Fonts](https://www.nerdfonts.com/)).
 {
   "willothy/nvim-cokeline",
   dependencies = {
-    "kyazdani42/nvim-web-devicons",
+    "nvim-lua/plenary.nvim",        -- Required for v0.4.0+
+    "kyazdani42/nvim-web-devicons", -- If you want devicons
   },
   config = true
 }
@@ -440,9 +443,12 @@ require('packer').startup(function()
   -- ...
   use({
     'willothy/nvim-cokeline',
-    requires = 'kyazdani42/nvim-web-devicons', -- If you want devicons
+    requires = {
+      "nvim-lua/plenary.nvim",        -- Required for v0.4.0+
+      "kyazdani42/nvim-web-devicons", -- If you want devicons
+    },
     config = function()
-      require('cokeline').setup()
+      require("cokeline").setup()
     end
   })
   -- ...
@@ -457,6 +463,7 @@ If your config is still written in Vimscript and you use
 ```vim
 call plug#begin('~/.config/nvim/plugged')
   " ...
+  Plug 'nvim-lua/plenary.nvim'        " Required for v0.4.0+
   Plug 'kyazdani42/nvim-web-devicons' " If you want devicons
   Plug 'willothy/nvim-cokeline'
   " ...
@@ -508,7 +515,7 @@ require('cokeline').setup({
     -- if set to `directory` buffers are sorted by their full path.
     -- if set to `number` buffers are sorted by bufnr, as in default Neovim
     -- default: 'last'.
-    new_buffers_position = 'last' | 'next' | 'directory' | 'number',
+    new_buffers_position = 'last' | 'next' | 'directory' | 'number' | function(buffer_a, buffer_b) -> true | false,
 
     -- If true, right clicking a buffer will close it
     -- The close button will still work normally
@@ -588,6 +595,14 @@ require('cokeline').setup({
   -- If you want a rhs component to be stateful, you can wrap it in a closure containing state.
   rhs = {..},
 
+  -- Tabpages can be displayed on either the left or right of the bufferline.
+  -- They act the same as other components, except they are passed TabPage objects instead of
+  -- buffer objects.
+  tabs = {
+    placement = "left" | "right",
+    components = {..}
+  },
+
   -- Left sidebar to integrate nicely with file explorer plugins.
   -- This is a table containing a `filetype` key and a list of `components` to
   -- be rendered in the sidebar.
@@ -602,15 +617,15 @@ require('cokeline').setup({
 
 #### So what's `function(buffer)`?
 
-Some of the configuration options can be functions that take a `buffer` as a
+Some of the configuration options can be functions that take a [`Buffer`](https://github.com/willothy/nvim-cokeline/wiki/Buffer) as a
 single parameter. This is useful as it allows users to set the values of
 components dynamically based on the buffer that component is being rendered
 for.
 
-The `buffer` parameter is just a Lua table with the following keys:
+The `Buffer` type is just a Lua table with the following keys:
 
 ```lua
-buffer = {
+Buffer = {
   -- The buffer's order in the bufferline (1 for the first buffer, 2 for the
   -- second one, etc.).
   index = int,
@@ -630,12 +645,14 @@ buffer = {
   -- The buffer is the last visible buffer in the tab bar
   is_last     = true | false,
 
-  -- The mouse is hovering over the buffer
+  -- The mouse is hovering over the current component in the buffer
   -- This is a special variable in that it will only be true for the hovered *component*
   -- on render. This is to allow components to respond to hover events individually without managing
   -- component state.
-  -- If you just need the hovered bufnr, you can use `require('cokeline.hover').hovered().bufnr`
   is_hovered  = true | false
+
+  -- The mouse is hovering over the buffer (true for all components)
+  buf_hovered = true | false
 
   -- The buffer's type as reported by `:echo &buftype`.
   type = 'string',
@@ -707,7 +724,30 @@ function Buffer:text()
 function Buffer:is_valid()
 ```
 
-#### What about `components`?
+#### What about [`TabPage`](https://github.com/willothy/nvim-cokeline/wiki/TabPage)s?
+
+Each method on a tab component is passed a `TabPage` object as an argument.
+
+`TabPage`, like `Buffer`, is simply a Lua table with some relevant data attached.
+
+```lua
+TabPage = {
+  -- The tabpage number, as reported by `nvim_list_tabpages`
+  number = integer,
+  -- A list of Window objects contained in the TabPage (see wiki for more info)
+  windows = Window[],
+  -- The currently focused window in the TabPage
+  focused = Window,
+  -- True if the TabPage is the current TabPage
+  is_active = boolean,
+  -- True if the TabPage is first in the list
+  is_first = boolean,
+  -- True if the TabPage is last in the list
+  is_last = boolean
+}
+```
+
+#### And [`components`](https://github.com/willothy/nvim-cokeline/wiki/Component)?
 
 You can configure what each buffer in your bufferline will be composed of by
 passing a list of components to the `setup` function.
@@ -823,7 +863,7 @@ like in the following example (where it's set to `'left'`):
 
 ![buffer-truncation](https://user-images.githubusercontent.com/38540736/226447798-6aee2e0f-f957-42ab-96dd-3618e78ba4ba.png)
 
-#### What about `history`?
+#### What about [`history`](https://github.com/willothy/nvim-cokeline/wiki/History)?
 
 The History keeps track of the buffers you access using a ringbuffer, and provides
 an API for accessing Buffer objects from the history.
@@ -928,855 +968,3 @@ for i = 1,9 do
   map('n', ('<Leader>%s'):format(i), ('<Plug>(cokeline-switch-%s)'):format(i), { silent = true })
 end
 ```
-
-## :nail_care: Example configs
-
-Open a new issue or send a PR if you'd like to have your configuration featured
-here!
-
-### author: [@noib3](https://github.com/noib3/dotfiles)
-
-<details>
-<summary>Click to see configuration</summary>
-
-```lua
-local get_hex = require('cokeline/utils').get_hex
-local mappings = require('cokeline/mappings')
-
-local comments_fg = get_hex('Comment', 'fg')
-local errors_fg = get_hex('DiagnosticError', 'fg')
-local warnings_fg = get_hex('DiagnosticWarn', 'fg')
-
-local red = vim.g.terminal_color_1
-local yellow = vim.g.terminal_color_3
-
-local components = {
-  space = {
-    text = ' ',
-    truncation = { priority = 1 }
-  },
-
-  two_spaces = {
-    text = '  ',
-    truncation = { priority = 1 },
-  },
-
-  separator = {
-    text = function(buffer)
-      return buffer.index ~= 1 and '▏' or ''
-    end,
-    truncation = { priority = 1 }
-  },
-
-  devicon = {
-    text = function(buffer)
-      return
-        (mappings.is_picking_focus() or mappings.is_picking_close())
-          and buffer.pick_letter .. ' '
-           or buffer.devicon.icon
-    end,
-    fg = function(buffer)
-      return
-        (mappings.is_picking_focus() and yellow)
-        or (mappings.is_picking_close() and red)
-        or buffer.devicon.color
-    end,
-    style = function(_)
-      return
-        (mappings.is_picking_focus() or mappings.is_picking_close())
-        and 'italic,bold'
-         or nil
-    end,
-    truncation = { priority = 1 }
-  },
-
-  index = {
-    text = function(buffer)
-      return buffer.index .. ': '
-    end,
-    truncation = { priority = 1 }
-  },
-
-  unique_prefix = {
-    text = function(buffer)
-      return buffer.unique_prefix
-    end,
-    fg = comments_fg,
-    style = 'italic',
-    truncation = {
-      priority = 3,
-      direction = 'left',
-    },
-  },
-
-  filename = {
-    text = function(buffer)
-      return buffer.filename
-    end,
-    style = function(buffer)
-      return
-        ((buffer.is_focused and buffer.diagnostics.errors ~= 0)
-          and 'bold,underline')
-        or (buffer.is_focused and 'bold')
-        or (buffer.diagnostics.errors ~= 0 and 'underline')
-        or nil
-    end,
-    truncation = {
-      priority = 2,
-      direction = 'left',
-    },
-  },
-
-  diagnostics = {
-    text = function(buffer)
-      return
-        (buffer.diagnostics.errors ~= 0 and '  ' .. buffer.diagnostics.errors)
-        or (buffer.diagnostics.warnings ~= 0 and '  ' .. buffer.diagnostics.warnings)
-        or ''
-    end,
-    fg = function(buffer)
-      return
-        (buffer.diagnostics.errors ~= 0 and errors_fg)
-        or (buffer.diagnostics.warnings ~= 0 and warnings_fg)
-        or nil
-    end,
-    truncation = { priority = 1 },
-  },
-
-  close_or_unsaved = {
-    text = function(buffer)
-      return buffer.is_modified and '●' or ''
-    end,
-    fg = function(buffer)
-      return buffer.is_modified and green or nil
-    end,
-    delete_buffer_on_left_click = true,
-    truncation = { priority = 1 },
-  },
-}
-
-require('cokeline').setup({
-  show_if_buffers_are_at_least = 2,
-
-  buffers = {
-    -- filter_valid = function(buffer) return buffer.type ~= 'terminal' end,
-    -- filter_visible = function(buffer) return buffer.type ~= 'terminal' end,
-    new_buffers_position = 'next',
-  },
-
-  rendering = {
-    max_buffer_width = 30,
-  },
-
-  default_hl = {
-    fg = function(buffer)
-      return
-        buffer.is_focused
-        and get_hex('Normal', 'fg')
-         or get_hex('Comment', 'fg')
-    end,
-    bg = get_hex('ColorColumn', 'bg'),
-  },
-
-  components = {
-    components.space,
-    components.separator,
-    components.space,
-    components.devicon,
-    components.space,
-    components.index,
-    components.unique_prefix,
-    components.filename,
-    components.diagnostics,
-    components.two_spaces,
-    components.close_or_unsaved,
-    components.space,
-  },
-})
-```
-
-</details>
-
-![userconfig-noib3](https://user-images.githubusercontent.com/38540736/226447816-c696153f-ccee-4e4a-8b6a-55e53ee737f8.png)
-
-<details>
-<summary>This config shows how you configure buffers w/ rounded corners.</summary>
-
-```lua
-local get_hex = require('cokeline/utils').get_hex
-
-require('cokeline').setup({
-  default_hl = {
-    fg = function(buffer)
-      return
-        buffer.is_focused
-        and get_hex('Normal', 'fg')
-         or get_hex('Comment', 'fg')
-    end,
-    bg = get_hex('ColorColumn', 'bg'),
-  },
-
-  components = {
-    {
-      text = ' ',
-      bg = get_hex('Normal', 'bg'),
-    },
-    {
-      text = '',
-      fg = get_hex('ColorColumn', 'bg'),
-      bg = get_hex('Normal', 'bg'),
-    },
-    {
-      text = function(buffer)
-        return buffer.devicon.icon
-      end,
-      fg = function(buffer)
-        return buffer.devicon.color
-      end,
-    },
-    {
-      text = ' ',
-    },
-    {
-      text = function(buffer) return buffer.filename .. '  ' end,
-      style = function(buffer)
-        return buffer.is_focused and 'bold' or nil
-      end,
-    },
-    {
-      text = '',
-      delete_buffer_on_left_click = true,
-    },
-    {
-      text = '',
-      fg = get_hex('ColorColumn', 'bg'),
-      bg = get_hex('Normal', 'bg'),
-    },
-  },
-})
-```
-
-</details>
-
-![userconfig-noib3](https://user-images.githubusercontent.com/38540736/226447796-12200cca-9dec-4145-8f4a-d271512bdf8c.png)
-
-<details>
-<summary>
-This config shows how to get equally sized buffers. All the buffers
-are 23 characters wide, adding padding spaces left and right if a buffer is too
-short and cutting it off if it's too long.
-</summary>
-
-```lua
-local get_hex = require('cokeline/utils').get_hex
-local mappings = require('cokeline/mappings')
-
-local str_rep = string.rep
-
-local green = vim.g.terminal_color_2
-local yellow = vim.g.terminal_color_3
-
-local comments_fg = get_hex('Comment', 'fg')
-local errors_fg = get_hex('DiagnosticError', 'fg')
-local warnings_fg = get_hex('DiagnosticWarn', 'fg')
-
-local min_buffer_width = 23
-
-local components = {
-  separator = {
-    text = ' ',
-    bg = get_hex('Normal', 'bg'),
-    truncation = { priority = 1 },
-  },
-
-  space = {
-    text = ' ',
-    truncation = { priority = 1 },
-  },
-
-  left_half_circle = {
-    text = '',
-    fg = get_hex('ColorColumn', 'bg'),
-    bg = get_hex('Normal', 'bg'),
-    truncation = { priority = 1 },
-  },
-
-  right_half_circle = {
-    text = '',
-    fg = get_hex('ColorColumn', 'bg'),
-    bg = get_hex('Normal', 'bg'),
-    truncation = { priority = 1 },
-  },
-
-  devicon = {
-    text = function(buffer)
-      return buffer.devicon.icon
-    end,
-    fg = function(buffer)
-      return buffer.devicon.color
-    end,
-    truncation = { priority = 1 },
-  },
-
-  index = {
-    text = function(buffer)
-      return buffer.index .. ': '
-    end,
-    fg = function(buffer)
-      return
-        (buffer.diagnostics.errors ~= 0 and errors_fg)
-        or (buffer.diagnostics.warnings ~= 0 and warnings_fg)
-        or nil
-    end,
-    truncation = { priority = 1 },
-  },
-
-  unique_prefix = {
-    text = function(buffer)
-      return buffer.unique_prefix
-    end,
-    fg = comments_fg,
-    style = 'italic',
-    truncation = {
-      priority = 3,
-      direction = 'left',
-    },
-  },
-
-  filename = {
-    text = function(buffer)
-      return buffer.filename
-    end,
-    fg = function(buffer)
-      return
-        (buffer.diagnostics.errors ~= 0 and errors_fg)
-        or (buffer.diagnostics.warnings ~= 0 and warnings_fg)
-        or nil
-    end,
-    style = function(buffer)
-      return
-        ((buffer.is_focused and buffer.diagnostics.errors ~= 0)
-          and 'bold,underline')
-        or (buffer.is_focused and 'bold')
-        or (buffer.diagnostics.errors ~= 0 and 'underline')
-        or nil
-    end
-    truncation = {
-      priority = 2,
-      direction = 'left',
-    },
-  },
-
-  close_or_unsaved = {
-    text = function(buffer)
-      return buffer.is_modified and '●' or ''
-    end,
-    fg = function(buffer)
-      return buffer.is_modified and green or nil
-    end
-    delete_buffer_on_left_click = true,
-    truncation = { priority = 1 },
-  },
-}
-
-local get_remaining_space = function(buffer)
-  local used_space = 0
-  for _, component in pairs(components) do
-    used_space = used_space + vim.fn.strwidth(
-      (type(component.text) == 'string' and component.text)
-      or (type(component.text) == 'function' and component.text(buffer))
-    )
-  end
-  return math.max(0, min_buffer_width - used_space)
-end
-
-local left_padding = {
-  text = function(buffer)
-    local remaining_space = get_remaining_space(buffer)
-    return str_rep(' ', remaining_space / 2 + remaining_space % 2)
-  end,
-}
-
-local right_padding = {
-  text = function(buffer)
-    local remaining_space = get_remaining_space(buffer)
-    return str_rep(' ', remaining_space / 2)
-  end,
-}
-
-require('cokeline').setup({
-  show_if_buffers_are_at_least = 2,
-
-  buffers = {
-    -- filter_valid = function(buffer) return buffer.type ~= 'terminal' end,
-    -- filter_visible = function(buffer) return buffer.type ~= 'terminal' end,
-    focus_on_delete = 'next',
-    new_buffers_position = 'next',
-  },
-
-  rendering = {
-    max_buffer_width = 23,
-  },
-
-  default_hl = {
-    fg = function(buffer)
-      return
-        buffer.is_focused
-        and get_hex('Normal', 'fg')
-         or get_hex('Comment', 'fg')
-    end,
-    bg = get_hex('ColorColumn', 'bg'),
-  },
-
-  sidebar = {
-    filetype = 'NvimTree',
-    components = {
-      {
-        text = '  NvimTree',
-        fg = yellow,
-        bg = get_hex('NvimTreeNormal', 'bg'),
-        style = 'bold',
-      },
-    }
-  },
-
-  components = {
-    components.separator,
-    components.left_half_circle,
-    left_padding,
-    components.devicon,
-    components.index,
-    components.unique_prefix,
-    components.filename,
-    components.space,
-    right_padding,
-    components.close_or_unsaved,
-    components.right_half_circle,
-  },
-})
-
-```
-
-</details>
-
-![userconfig-noib3](https://user-images.githubusercontent.com/38540736/226447811-c35d930a-94d4-4715-889b-2b2e2fafe4bd.png)
-
-### author: [@olimorris](https://github.com/olimorris/dotfiles)
-
-<details>
-<summary>Click to see configuration</summary>
-
-```lua
-local M = {}
-
-function M.setup()
-  local present, cokeline = pcall(require, "cokeline")
-  if not present then
-    return
-  end
-
-  local colors = require("colors").get()
-
-  cokeline.setup({
-
-    show_if_buffers_are_at_least = 2,
-
-    mappings = {
-      cycle_prev_next = true,
-    },
-
-    default_hl = {
-      fg = function(buffer)
-        return buffer.is_focused and colors.purple or colors.gray
-      end,
-      bg = "NONE",
-      style = function(buffer)
-        return buffer.is_focused and "bold" or nil
-      end,
-    },
-
-    components = {
-      {
-        text = function(buffer)
-          return buffer.index ~= 1 and "  "
-        end,
-      },
-      {
-        text = function(buffer)
-          return buffer.index .. ": "
-        end,
-        style = function(buffer)
-          return buffer.is_focused and "bold" or nil
-        end,
-      },
-      {
-        text = function(buffer)
-          return buffer.unique_prefix
-        end,
-        fg = function(buffer)
-          return buffer.is_focused and colors.purple or colors.gray
-        end,
-        style = "italic",
-      },
-      {
-        text = function(buffer)
-          return buffer.filename .. " "
-        end,
-        style = function(buffer)
-          return buffer.is_focused and "bold" or nil
-        end,
-      },
-      {
-        text = function(buffer)
-          return buffer.is_modified and " ●"
-        end,
-        fg = function(buffer)
-          return buffer.is_focused and colors.red
-        end,
-      },
-      {
-        text = "  ",
-      },
-    },
-  })
-end
-
-return M
-```
-
-</details>
-
-![userconfig-olimorris](https://user-images.githubusercontent.com/38540736/226447827-e2dc7705-b255-4108-9b1a-037adb64c71c.gif)
-
-### author: [@alex-popov-tech](https://github.com/alex-popov-tech/.dotfiles)
-
-<details>
-<summary>Click to see configuration</summary>
-
-```lua
-return function()
-    local get_hex = require("cokeline/utils").get_hex
-    local space = {text = " "}
-    require("cokeline").setup(
-        {
-            mappings = {
-              cycle_prev_next = true,
-            },
-            default_hl = {
-              fg = function(buffer)
-                return
-                  buffer.is_focused and nil or get_hex("Comment", "fg")
-              end,
-              bg = "none",
-            },
-            components = {
-                space,
-                {
-                    text = function(buffer)
-                        return buffer.devicon.icon
-                    end,
-                    fg = function(buffer)
-                        return buffer.devicon.color
-                    end
-                },
-                {
-                    text = function(buffer)
-                        return buffer.filename
-                    end,
-                    fg = function(buffer)
-                        if buffer.is_focused then
-                            return "#78dce8"
-                        end
-                        if buffer.is_modified then
-                            return "#e5c463"
-                        end
-                        if buffer.lsp.errors ~= 0 then
-                            return "#fc5d7c"
-                        end
-                    end,
-                    style = function(buffer)
-                        if buffer.is_focused then
-                            return "underline"
-                        end
-                        return nil
-                    end
-                },
-                {
-                    text = function(buffer)
-                        if buffer.is_readonly then
-                            return " 🔒"
-                        end
-                        return ""
-                    end
-                },
-                space
-            }
-        }
-    )
-end
-```
-
-</details>
-
-![userconfig-alex-popov-tech](https://user-images.githubusercontent.com/38540736/226447825-7f314e18-472e-4148-982b-d569b1743a9b.png)
-
-### author: [@danielnieto](https://github.com/danielnieto)
-
-<details>
-<summary>This configuration shows Powerline styled tabline, and the basic stuff: just the devicons and the filename with unique prefixes. It also shows the pick buffer character.</summary>
-
-```lua
-local is_picking_focus = require("cokeline/mappings").is_picking_focus
-local is_picking_close = require("cokeline/mappings").is_picking_close
-local get_hex = require("cokeline/utils").get_hex
-
-local red = vim.g.terminal_color_1
-local yellow = vim.g.terminal_color_4
-local space = {text = " "}
-local dark = get_hex("Normal", "bg")
-local text = get_hex("Comment", "fg")
-local grey = get_hex("ColorColumn", "bg")
-local light = get_hex("Comment", "fg")
-local high = "#a6d120"
-
-require("cokeline").setup(
-    {
-        default_hl = {
-            fg = function(buffer)
-                if buffer.is_focused then
-                    return dark
-                end
-                return text
-            end,
-            bg = function(buffer)
-                if buffer.is_focused then
-                    return high
-                end
-                return grey
-            end
-        },
-        components = {
-            {
-                text = function(buffer)
-                    if buffer.index ~= 1 then
-                        return ""
-                    end
-                    return ""
-                end,
-                bg = function(buffer)
-                    if buffer.is_focused then
-                        return high
-                    end
-                    return grey
-                end,
-                fg = dark
-            },
-            space,
-            {
-                text = function(buffer)
-                    if is_picking_focus() or is_picking_close() then
-                        return buffer.pick_letter .. " "
-                    end
-
-                    return buffer.devicon.icon
-                end,
-                fg = function(buffer)
-                    if is_picking_focus() then
-                        return yellow
-                    end
-                    if is_picking_close() then
-                        return red
-                    end
-
-                    if buffer.is_focused then
-                        return dark
-                    else
-                        return light
-                    end
-                end,
-                style = function(_)
-                    return (is_picking_focus() or is_picking_close()) and "italic,bold" or nil
-                end
-            },
-            {
-                text = function(buffer)
-                    return buffer.unique_prefix .. buffer.filename .. "⠀"
-                end,
-                style = function(buffer)
-                    return buffer.is_focused and "bold" or nil
-                end
-            },
-            {
-                text = "",
-                fg = function(buffer)
-                    if buffer.is_focused then
-                        return high
-                    end
-                    return grey
-                end,
-                bg = dark
-            }
-        }
-    }
-)
-```
-
-</details>
-
-![cokeline-danielnieto89](https://user-images.githubusercontent.com/2120107/171753414-9d81c866-7f99-48f8-b6ff-0c28e8883aaa.gif)
-
-### author: [@miversen33](https://github.com/miversen33)
-
-<details>
-<summary>This configuration shows the `is_first` and `is_last` buffer options and how to create a cokeline with different components based on if the
-component is the first, last, or neither Additionally, this config has some integration with the lsp.</summary>
-
-```lua
-local get_hex = require("cokeline.utils").get_hex
-local active_bg_color = '#931E9E'
-local inactive_bg_color = get_hex('Normal', 'bg')
-local bg_color = get_hex('ColorColumn', 'bg')
-require('cokeline').setup({
-      show_if_buffers_are_at_least = 1,
-      mappings = {
-          cycle_prev_next = true
-      },
-      default_hl = {
-        bg = function(buffer)
-          if buffer.is_focused then
-            return active_bg_color
-          end
-        end,
-      },
-      components = {
-          {
-            text = function(buffer)
-              local _text = ''
-              if buffer.index > 1 then _text = ' ' end
-              if buffer.is_focused or buffer.is_first then
-                _text = _text .. ''
-              end
-              return _text
-            end,
-            fg = function(buffer)
-              if buffer.is_focused then
-                return active_bg_color
-              elseif buffer.is_first then
-                return inactive_bg_color
-              end
-            end,
-            bg = function(buffer)
-              if buffer.is_focused then
-                if buffer.is_first then
-                  return bg_color
-                else
-                  return inactive_bg_color
-                end
-              elseif buffer.is_first then
-                  return bg_color
-              end
-            end
-          },
-          {
-              text = function(buffer)
-                  local status = ''
-                  if buffer.is_readonly then
-                      status = '➖'
-                  elseif buffer.is_modified then
-                      status = ''
-                  end
-                  return status
-              end,
-          },
-          {
-              text = function(buffer)
-                  return " " .. buffer.devicon.icon
-              end,
-              fg = function(buffer)
-                if buffer.is_focused then
-                  return buffer.devicon.color
-                end
-              end
-          },
-          {
-              text = function(buffer)
-                return buffer.unique_prefix .. buffer.filename
-              end,
-              fg = function(buffer)
-                  if(buffer.diagnostics.errors > 0) then
-                      return '#C95157'
-                  end
-              end,
-              style = function(buffer)
-                  local text_style = 'NONE'
-                  if buffer.is_focused then
-                      text_style = 'bold'
-                  end
-                  if buffer.diagnostics.errors > 0 then
-                      if text_style ~= 'NONE' then
-                          text_style = text_style .. ',underline'
-                      else
-                          text_style = 'underline'
-                      end
-                  end
-                  return text_style
-              end
-          },
-          {
-              text = function(buffer)
-                  local errors = buffer.diagnostics.errors
-                  if(errors <= 9) then
-                      errors = ''
-                  else
-                      errors = "🙃"
-                  end
-                  return errors .. ' '
-              end,
-              fg = function(buffer)
-                if buffer.diagnostics.errors == 0 then
-                  return '#3DEB63'
-                elseif buffer.diagnostics.errors <= 9 then
-                  return '#DB121B'
-                end
-              end
-          },
-          {
-              text = '',
-              delete_buffer_on_left_click = true
-          },
-          {
-            text = function(buffer)
-              if buffer.is_focused or buffer.is_last then
-                return ''
-              else
-                return ' '
-              end
-            end,
-            fg = function(buffer)
-              if buffer.is_focused then
-                return active_bg_color
-              elseif buffer.is_last then
-                return inactive_bg_color
-              else
-                return bg_color
-              end
-            end,
-            bg = function(buffer)
-              if buffer.is_focused then
-                if buffer.is_last then
-                  return bg_color
-                else
-                  return inactive_bg_color
-                end
-              elseif buffer.is_last then
-                  return bg_color
-              end
-            end
-          }
-      },
-  })
-```
-
-</details>
-
-![cokeline-miversen33](https://user-images.githubusercontent.com/2640668/174489433-2faa0eea-4921-42ea-a877-1e143e44bc14.png)

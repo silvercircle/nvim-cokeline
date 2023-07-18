@@ -60,6 +60,15 @@ local setup = function(preferences)
     history.setup(_G.cokeline.config.history.size)
     _G.cokeline.history = history
   end
+
+  local ok, _ = pcall(require, "plenary")
+  if not ok then
+    vim.api.nvim_err_writeln(
+      "nvim-cokeline: plenary.nvim is required to use this plugin as of v0.4.0"
+    )
+    return
+  end
+
   augroups.setup()
   mappings.setup()
   hover.setup()

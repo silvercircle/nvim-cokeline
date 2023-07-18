@@ -5,6 +5,7 @@ local version = vim.version()
 local buffers = require("cokeline.buffers")
 local tabs = require("cokeline.tabs")
 local rendering = require("cokeline.rendering")
+local iter = require("plenary.iterators").iter
 local last_position = nil
 
 function M.hovered()
@@ -39,10 +40,10 @@ function M.get_current(col)
   local cx = rendering.prepare(bufs)
 
   local current_width = 0
-  for _, component in ipairs(cx.sidebar) do
+  for _, component in ipairs(cx.sidebar_left) do
     current_width = current_width + component.width
     if current_width >= col then
-      return component, cx.sidebar
+      return component, cx.sidebar_left
     end
   end
   if
@@ -81,6 +82,12 @@ function M.get_current(col)
       end
     end
   end
+  for _, component in ipairs(cx.sidebar_right) do
+    current_width = current_width + component.width
+    if current_width >= col then
+      return component, cx.sidebar_right
+    end
+  end
 end
 
 local function mouse_leave(hovered)
@@ -89,6 +96,10 @@ local function mouse_leave(hovered)
     cx = buffers.get_buffer(hovered.bufnr)
   elseif hovered.kind == "tab" then
     cx = tabs.get_tabpage(hovered.bufnr)
+  elseif hovered.kind == "sidebar" then
+    cx = { number = hovered.bufnr, side = hovered.sidebar }
+  else
+    cx = {}
   end
   if cx then
     cx.is_hovered = false
@@ -107,6 +118,10 @@ local function mouse_enter(component, current)
     cx = buffers.get_buffer(component.bufnr)
   elseif component.kind == "tab" then
     cx = tabs.get_tabpage(component.bufnr)
+  elseif component.kind == "sidebar" then
+    cx = { number = component.bufnr, side = component.sidebar }
+  else
+    cx = {}
   end
   if cx then
     cx.is_hovered = true
@@ -169,8 +184,7 @@ local function on_hover(current)
 end
 
 local function width(bufs, buf)
-  return vim
-    .iter(bufs)
+  return iter(bufs)
     :filter(function(v)
       return v.bufnr == buf
     end)
@@ -273,9 +287,7 @@ end
 
 function M.setup()
   if
-    _G.cokeline.config.mappings.disable_mouse
-    or version.minor < 8
-    or not vim.o.mousemoveevent
+    _G.cokeline.config.mappings.disable_mouse == true or version.minor < 8
   then
     return
   end

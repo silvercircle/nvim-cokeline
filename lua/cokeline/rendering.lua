@@ -3,13 +3,13 @@ local sidebar = require("cokeline/my_sidebar")
 local rhs = require("cokeline/rhs")
 local tabs = require("cokeline.tabs")
 local RenderContext = require("cokeline/context")
+local iter = require("plenary.iterators").iter
 
 local insert = table.insert
 local sort = table.sort
 local unpack = unpack or table.unpack
 
 local extend = vim.list_extend
-local filter = vim.tbl_filter
 local o = vim.o
 
 ---@type index
@@ -19,9 +19,9 @@ local current_index
 ---@param previous_buffer_index  index
 ---@return Buffer
 local find_current_buffer = function(buffers, previous_buffer_index)
-  local focused_buffer = filter(function(buffer)
+  local focused_buffer = iter(buffers):find(function(buffer)
     return buffer.is_focused
-  end, buffers)[1]
+  end)
 
   return focused_buffer or buffers[previous_buffer_index] or buffers[#buffers]
 end
@@ -55,8 +55,12 @@ local function to_components(context, complist)
       local render_cx
       if context.filetype then
         render_cx = RenderContext:buffer(context)
+        render_cx.provider.buf_hovered = hovered ~= nil
+          and hovered.bufnr == context.number
       else
         render_cx = RenderContext:tab(context)
+        render_cx.provider.tab_hovered = hovered ~= nil
+          and hovered.bufnr == context.number
       end
       render_cx.provider.is_hovered = hovered ~= nil
         and hovered.bufnr == context.number
@@ -97,11 +101,12 @@ end
 ---@param visible_buffers  Buffer[]
 ---@return table|string
 local prepare = function(visible_buffers)
-  local sidebar_components = sidebar.get_components()
+  local sidebar_components_l = sidebar.get_components("left")
+  local sidebar_components_r = sidebar.get_components("right")
   local rhs_components = rhs.get_components()
-  local available_width = o.columns - components.width(sidebar_components)
+  local available_width = o.columns - components.width(sidebar_components_l)
   if available_width == 0 then
-    return components.render(sidebar_components)
+    return components.render(sidebar_components_l)
   end
 
   local tab_placement
@@ -113,7 +118,7 @@ local prepare = function(visible_buffers)
     tabs_width = components.width(tab_components)
     available_width = available_width - tabs_width
     if available_width == 0 then
-      return components.render(sidebar_components)
+      return components.render(sidebar_components_l)
         .. components.render(tab_components)
     end
   end
@@ -135,7 +140,8 @@ local prepare = function(visible_buffers)
     end
 
     return {
-      sidebar = sidebar_components,
+      sidebar_left = sidebar_components_l,
+      sidebar_right = sidebar_components_r,
       buffers = current_components,
       rhs = rhs_components,
       tabs = tab_components,
@@ -159,6 +165,7 @@ local prepare = function(visible_buffers)
   }, _G.cokeline.components)
 
   local rhs_width = components.width(rhs_components)
+    + components.width(sidebar_components_r)
   local available_width_left, available_width_right =
     _G.cokeline.config.rendering.slider(
       available_width
@@ -194,7 +201,8 @@ local prepare = function(visible_buffers)
 
   local bufs_width = components.width(buffer_components)
   return {
-    sidebar = sidebar_components,
+    sidebar_left = sidebar_components_l,
+    sidebar_right = sidebar_components_r,
     buffers = buffer_components,
     rhs = rhs_components,
     tabs = tab_components,
@@ -210,7 +218,7 @@ end
 ---@return string
 local render = function(visible_buffers, fill_hl)
   local cx = prepare(visible_buffers)
-  local rendered = components.render(cx.sidebar) .. "%#" .. fill_hl .. "#"
+  local rendered = components.render(cx.sidebar_left) .. "%#" .. fill_hl .. "#"
   if
     _G.cokeline.config.tabs and _G.cokeline.config.tabs.placement == "left"
   then
@@ -228,6 +236,7 @@ local render = function(visible_buffers, fill_hl)
   then
     rendered = rendered .. "%#" .. fill_hl .. "#" .. components.render(cx.tabs)
   end
+  rendered = rendered .. components.render(cx.sidebar_right)
   return rendered
 end
 
