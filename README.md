@@ -40,7 +40,7 @@ examples):
 <summary>Click to see configuration</summary>
 
 ```lua
-local get_hex = require('cokeline/utils').get_hex
+local get_hex = require('cokeline.utils').get_hex
 
 require('cokeline').setup({
   default_hl = {
@@ -95,7 +95,7 @@ require('cokeline').setup({
 <summary>Click to see configuration</summary>
 
 ```lua
-local get_hex = require('cokeline/utils').get_hex
+local get_hex = require('cokeline.utils').get_hex
 
 local green = vim.g.terminal_color_2
 local yellow = vim.g.terminal_color_3
@@ -150,7 +150,7 @@ require('cokeline').setup({
 <summary>Click to see configuration</summary>
 
 ```lua
-local get_hex = require('cokeline/utils').get_hex
+local get_hex = require('cokeline.utils').get_hex
 
 require('cokeline').setup({
   default_hl = {
@@ -222,16 +222,16 @@ keyboard reachability if the letter is already assigned to another buffer.
 <summary>Click to see configuration</summary>
 
 ```lua
-local is_picking_focus = require('cokeline/mappings').is_picking_focus
-local is_picking_close = require('cokeline/mappings').is_picking_close
-local get_hex = require('cokeline/utils').get_hex
+local is_picking_focus = require('cokeline.mappings').is_picking_focus
+local is_picking_close = require('cokeline.mappings').is_picking_close
+local get_hex = require('cokeline.utils').get_hex
 
 local red = vim.g.terminal_color_1
 local yellow = vim.g.terminal_color_3
 
 require('cokeline').setup({
   default_hl = {
-    focused = function(buffer)
+    fg = function(buffer)
       return
         buffer.is_focused
         and get_hex('Normal', 'fg')
@@ -302,13 +302,13 @@ You can add a left sidebar to integrate nicely with file explorer plugins like
 <summary>Click to see configuration</summary>
 
 ```lua
-local get_hex = require('cokeline/utils').get_hex
+local get_hex = require('cokeline.utils').get_hex
 
 local yellow = vim.g.terminal_color_3
 
 require('cokeline').setup({
   default_hl = {
-    focused = function(buffer)
+    fg = function(buffer)
       return
         buffer.is_focused
         and get_hex('Normal', 'fg')
