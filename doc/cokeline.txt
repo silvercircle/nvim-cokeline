@@ -1,10 +1,9 @@
-*cokeline.txt*           For NVIM >=0.7           Last change: 2023 October 04
+*cokeline.txt*           For NVIM >=0.7           Last change: 2023 October 05
 
 ==============================================================================
 Table of Contents                                 *cokeline-table-of-contents*
 
   - Features                                               |cokeline-features|
-  - Plans and Ideas                                 |cokeline-plans-and-ideas|
   - Requirements                                       |cokeline-requirements|
   - Installation                                       |cokeline-installation|
   - Configuration                                     |cokeline-configuration|
@@ -100,11 +99,6 @@ If you are a user of `resession.nvim`
 restored along with the rest of your sessions.
 
 
-PLANS AND IDEAS                                     *cokeline-plans-and-ideas*
-
-If you have an idea or feature request, don’t hesitate to open an issue!
-
-
 REQUIREMENTS                                           *cokeline-requirements*
 
 The two main requirements are Neovim 0.5+ and the `termguicolors` option to be
@@ -136,29 +130,6 @@ WITH LAZY.NVIM
       config = true
     }
     })
-<
-
-
-WITH PACKER.NVIM
-
->lua
-    vim.opt.termguicolors = true
-    
-    require('packer').startup(function()
-      -- ...
-      use({
-        'willothy/nvim-cokeline',
-        requires = {
-          "nvim-lua/plenary.nvim",        -- Required for v0.4.0+
-          "kyazdani42/nvim-web-devicons", -- If you want devicons
-          "stevearc/resession.nvim"       -- Optional, for persistent history
-        },
-        config = function()
-          require("cokeline").setup()
-        end
-      })
-      -- ...
-    end)
 <
 
 
