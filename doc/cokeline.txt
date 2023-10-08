@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 *cokeline.txt*           For NVIM >=0.7           Last change: 2023 October 05
+=======
+*cokeline.txt*           For NVIM >=0.7           Last change: 2023 October 08
+>>>>>>> main
 
 ==============================================================================
 Table of Contents                                 *cokeline-table-of-contents*

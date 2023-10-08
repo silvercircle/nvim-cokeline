@@ -29,15 +29,15 @@ local find_current_buffer = function(buffers, previous_buffer_index)
   return focused_buffer or buffers[previous_buffer_index] or buffers[#buffers]
 end
 
----@param c1  Component<Buffer>
----@param c2  Component<Buffer>
+---@param c1  Component
+---@param c2  Component
 ---@return boolean
 local by_decreasing_priority = function(c1, c2)
   return c1.truncation.priority < c2.truncation.priority
 end
 
----@param c1  Component<Buffer>
----@param c2  Component<Buffer>
+---@param c1  Component
+---@param c2  Component
 ---@return boolean
 local by_increasing_index = function(c1, c2)
   return c1.index < c2.index
@@ -46,8 +46,8 @@ end
 -- Takes in either a single buffer or a list of buffers, and it returns a list
 -- of all the rendered components together with their total combined width.
 ---@param context Buffer|Buffer[]|TabPage|TabPage[]
----@param complist Component<Buffer|TabPage>[]
----@return Component<Buffer|TabPage>, number
+---@param complist Component[]
+---@return Component, number
 local function to_components(context, complist)
   local hovered = _G.cokeline.__hovered
   -- A simple heuristic to check if we're dealing with single buffer or a list
@@ -127,45 +127,58 @@ local prepare = function(visible_buffers)
   end
 
   local current_buffer = find_current_buffer(visible_buffers, current_index)
-  current_index = current_buffer.index
 
-  local current_components, current_width =
-    to_components(current_buffer, state.components)
-  if current_width >= available_width then
-    sort(current_components, by_decreasing_priority)
-    components.shorten(current_components, available_width)
-    sort(current_components, by_increasing_index)
-    if current_buffer.index > 1 then
-      components.shorten(current_components, available_width, "left")
-    end
-    if current_buffer.index < #visible_buffers then
-      components.shorten(current_components, available_width, "right")
-    end
+  local current_components, current_width
+  if current_buffer then
+    current_index = current_buffer.index
 
-    return {
-      sidebar_left = sidebar_components_l,
-      sidebar_right = sidebar_components_r,
-      buffers = current_components,
-      rhs = rhs_components,
-      tabs = tab_components,
-      gap = math.max(
-        0,
-        available_width
-          - (
-            components.width(current_components)
-            + components.width(rhs_components)
-          )
-      ),
-    }
+    current_components, current_width =
+      to_components(current_buffer, state.components)
+    if current_width >= available_width then
+      sort(current_components, by_decreasing_priority)
+      components.shorten(current_components, available_width)
+      sort(current_components, by_increasing_index)
+      if current_buffer.index > 1 then
+        components.shorten(current_components, available_width, "left")
+      end
+      if current_buffer.index < #visible_buffers then
+        components.shorten(current_components, available_width, "right")
+      end
+
+      return {
+        sidebar_left = sidebar_components_l,
+        sidebar_right = sidebar_components_r,
+        buffers = current_components,
+        rhs = rhs_components,
+        tabs = tab_components,
+        gap = math.max(
+          0,
+          available_width
+            - (
+              components.width(current_components)
+              + components.width(rhs_components)
+            )
+        ),
+      }
+    end
+  else
+    current_components, current_width = {}, 0
   end
 
-  local left_components, left_width = to_components({
-    unpack(visible_buffers, 1, current_buffer.index - 1),
-  }, state.components)
+  local left_components, left_width
+  local right_components, right_width
+  if #visible_buffers > 0 then
+    left_components, left_width = to_components({
+      unpack(visible_buffers, 1, current_buffer.index - 1),
+    }, state.components)
 
-  local right_components, right_width = to_components({
-    unpack(visible_buffers, current_buffer.index + 1, #visible_buffers),
-  }, state.components)
+    right_components, right_width = to_components({
+      unpack(visible_buffers, current_buffer.index + 1, #visible_buffers),
+    }, state.components)
+  else
+    left_components, left_width = {}, 0
+    right_components, right_width = {}, 0
+  end
 
   local rhs_width = components.width(rhs_components)
     + components.width(sidebar_components_r)
