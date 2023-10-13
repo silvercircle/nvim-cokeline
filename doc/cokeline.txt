@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-*cokeline.txt*           For NVIM >=0.7           Last change: 2023 October 05
-=======
-*cokeline.txt*           For NVIM >=0.7           Last change: 2023 October 08
->>>>>>> main
+*cokeline.txt*           For NVIM >=0.7           Last change: 2023 October 13
 
 ==============================================================================
 Table of Contents                                 *cokeline-table-of-contents*
@@ -53,7 +49,7 @@ reported by the LSP.
 BUFFER PICK ~
 
 You can focus and close any buffer by typing its `pick_letter`. Letters are
-assigned by filename by default (e.g. `foo.txt` gets the letter `f`), and by
+assigned by filename by default (e.g. `foo.txt` gets the letter `f`), and by
 keyboard reachability if the letter is already assigned to another buffer.
 
 
@@ -84,6 +80,8 @@ HOVER EVENTS ~
 Each component has access to an is_hovered property, and can be given custom
 `on_mouse_enter` and `on_mouse_leave` handlers, allowing for implementations of
 close buttons, diagnostic previews, and more complex funcionality.
+
+Note: requires |'mousemoveevent'|
 
 
 BUFFER RE-ORDERING (INCLUDING MOUSE-DRAG REORDERING) ~
