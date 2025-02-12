@@ -14,7 +14,7 @@ local fn = vim.fn
 local split = vim.split
 
 local util = lazy("cokeline.utils")
-local iter = require("plenary.iterators").iter
+local iter = require("cokeline.iter").iter
 
 ---@type bufnr
 local current_valid_index

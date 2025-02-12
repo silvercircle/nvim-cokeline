@@ -7,7 +7,7 @@ local buffers = lazy("cokeline.buffers")
 local config = lazy("cokeline.config")
 local tabs = lazy("cokeline.tabs")
 local rendering = lazy("cokeline.rendering")
-local iter = lazy("plenary.iterators").iter
+local iter = lazy("cokeline.iter").iter
 local last_position = nil
 
 local hovered
